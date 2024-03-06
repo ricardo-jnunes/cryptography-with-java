@@ -4,6 +4,7 @@ import java.io.DataInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.security.GeneralSecurityException;
 import java.security.KeyFactory;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
@@ -11,19 +12,15 @@ import java.security.PublicKey;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 
-import javax.crypto.Cipher;
-
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import com.cryptography.dtos.ExampleDTO;
+import com.cryptography.dtos.request.ExampleDTORequest;
+import com.cryptography.dtos.response.ExampleDTO;
 
 @Service
 public class CryptographyService {
-
-	public static final String ALGORITHM = "RSA";
 
 	/**
 	 * Local da chave privada no sistema de arquivos.
@@ -34,6 +31,9 @@ public class CryptographyService {
 	 * Local da chave pública no sistema de arquivos.
 	 */
 	public static final String PATH_CHAVE_PUBLICA = "C:\\keys\\public-nopwd-dev.der";
+
+	@Autowired
+	private RsaKeyService rsaKeyService;
 
 	public static boolean verificaSeExisteChavesNoSO() {
 
@@ -49,7 +49,7 @@ public class CryptographyService {
 
 	public static PublicKey loadPublicKey(byte[] bytes) throws Exception {
 		try {
-			KeyFactory keyFactory = KeyFactory.getInstance(ALGORITHM);
+			KeyFactory keyFactory = KeyFactory.getInstance(RsaKeyService.KEY_FACTORY_ALGORITHM);
 			X509EncodedKeySpec keySpec = new X509EncodedKeySpec(bytes);
 			return keyFactory.generatePublic(keySpec);
 		} catch (NoSuchAlgorithmException e) {
@@ -64,7 +64,7 @@ public class CryptographyService {
 	public static PrivateKey loadPrivateKey(byte[] bytes) throws Exception {
 		try {
 
-			KeyFactory keyFactory = KeyFactory.getInstance(ALGORITHM);
+			KeyFactory keyFactory = KeyFactory.getInstance(RsaKeyService.KEY_FACTORY_ALGORITHM);
 			PKCS8EncodedKeySpec keySpec = new PKCS8EncodedKeySpec(bytes);
 			return keyFactory.generatePrivate(keySpec);
 		} catch (NoSuchAlgorithmException e) {
@@ -75,81 +75,7 @@ public class CryptographyService {
 			throw new Exception(e);
 		}
 	}
-
-	/**
-	 * Criptografa o texto puro usando chave pública.
-	 */
-	public static byte[] criptografa(String texto, PublicKey chave) {
-		byte[] cipherText = null;
-
-		try {
-			final Cipher cipher = Cipher.getInstance(ALGORITHM);
-			// Criptografa o texto puro usando a chave Púlica
-			cipher.init(Cipher.ENCRYPT_MODE, chave);
-			cipherText = cipher.doFinal(texto.getBytes());
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-
-		return cipherText;
-	}
-
-	/**
-	 * Descriptografa o texto puro usando chave privada.
-	 */
-	public static String descriptografa(byte[] texto, PrivateKey chavePrivada) {
-		byte[] dectyptedText = null;
-
-		try {
-			final Cipher cipher = Cipher.getInstance(ALGORITHM);
-			// Descriptografa o texto puro usando a chave Privada
-			cipher.init(Cipher.DECRYPT_MODE, chavePrivada);
-			dectyptedText = cipher.doFinal(texto);
-
-		} catch (Exception ex) {
-			ex.printStackTrace();
-		}
-
-		return new String(dectyptedText);
-	}
-
-	/**
-	 * Criptografa o texto puro usando chave privada.
-	 */
-	public static byte[] criptografa(String texto, PrivateKey chave) {
-		byte[] cipherText = null;
-
-		try {
-			final Cipher cipher = Cipher.getInstance(ALGORITHM);
-			// Criptografa o texto puro usando a chave Púlica
-			cipher.init(Cipher.ENCRYPT_MODE, chave);
-			cipherText = cipher.doFinal(texto.getBytes());
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-
-		return cipherText;
-	}
-
-	/**
-	 * Descriptografa o texto puro usando chave pública.
-	 */
-	public static String descriptografa(byte[] texto, PublicKey chavePrivada) {
-		byte[] dectyptedText = null;
-
-		try {
-			final Cipher cipher = Cipher.getInstance(ALGORITHM);
-			// Descriptografa o texto puro usando a chave Privada
-			cipher.init(Cipher.DECRYPT_MODE, chavePrivada);
-			dectyptedText = cipher.doFinal(texto);
-
-		} catch (Exception ex) {
-			ex.printStackTrace();
-		}
-
-		return new String(dectyptedText);
-	}
-
+	
 	private static byte[] getFileContent(String filePath) throws IOException {
 		File file = new File(filePath);
 		FileInputStream fis = new FileInputStream(file);
@@ -164,74 +90,41 @@ public class CryptographyService {
 		return keyBytes;
 	}
 
-	/**
-	 * Testa o Algoritmo
+	/*
+	 * TODO something with request body?
 	 */
-	public static void main(String[] args) {
+	public ExampleDTO getResponse(ExampleDTORequest request) {
+
+		ExampleDTO res = new ExampleDTO();
+		testKeys();
 
 		try {
+			String criptografiedStr = RsaKeyService.encrypt("12756247820", RsaKeyService.partnerPublickey);
+			System.out.println("Apenas testando método de criptografia " + criptografiedStr);
+			res.setMessage(criptografiedStr);
+			res.setSuccess(true);
+			return res;
 
-			// Verifica se já existe um par de chaves, caso contrário faz algo..
-			if (!verificaSeExisteChavesNoSO()) {
-				System.err.println("No certs found.");
-			}
-
-			final String msgOriginal = "12345678955";
-
-			// Carrega as chaves
-			final byte[] publicContent = getFileContent(PATH_CHAVE_PUBLICA);
-			PublicKey chavePublica = loadPublicKey(publicContent);
-
-			final byte[] privateContent = getFileContent(PATH_CHAVE_PRIVADA);
-			PrivateKey chavePrivada = loadPrivateKey(privateContent);
-
-			// Criptografa a Mensagem usando a Chave Pública
-			byte[] textoCriptografado = criptografa(msgOriginal, chavePublica);
-
-			// Descriptografa a Mensagem usando a Chave Privada
-			String textoPuro = descriptografa(textoCriptografado, chavePrivada);
-
-			// Imprime o texto original, o texto criptografado e
-			// o texto descriptografado.
-			System.out.println("Mensagem Original: " + msgOriginal);
-			System.out.println("Mensagem Criptografada: " + textoCriptografado.toString());
-			System.out.println("Mensagem Decriptografada: " + textoPuro);
-
-			// Criptografa a Mensagem usando a Chave Pública
-			textoCriptografado = criptografa(msgOriginal, chavePrivada);
-
-			// Descriptografa a Mensagem usando a Chave Privada
-			textoPuro = descriptografa(textoCriptografado, chavePublica);
-
-			// Imprime o texto original, o texto criptografado e
-			// o texto descriptografado.
-			System.out.println("Mensagem Original: " + msgOriginal);
-			System.out.println("Mensagem Criptografada: " + textoCriptografado.toString());
-			System.out.println("Mensagem Decriptografada: " + textoPuro);
-
-			// ----------------------------------------------
-
-			LocalDateTime date = LocalDateTime.now();
-			String timestamp = date.format(DateTimeFormatter.ofPattern("MM/dd/yyyy HH:mm:ss"));
-			textoCriptografado = criptografa(timestamp, chavePrivada);
-
-			textoPuro = descriptografa(textoCriptografado, chavePublica);
-
-			// Imprime o texto original, o texto criptografado e
-			// o texto descriptografado.
-			System.out.println("Mensagem Original: " + timestamp);
-			System.out.println("Mensagem Criptografada: " + textoCriptografado.toString());
-			System.out.println("Mensagem Decriptografada: " + textoPuro);
-
-		} catch (Exception e) {
+		} catch (GeneralSecurityException e) {
 			e.printStackTrace();
+
 		}
+
+		return res;
 
 	}
 
-	public ExampleDTO criptografy() {
-		// TODO Auto-generated method stub
-		return new ExampleDTO();
+	private void testKeys() {
+		try {
+			String teste1 = "0123";
+			String encrypt = RsaKeyService.encrypt(teste1, RsaKeyService.myPublickey);
+			System.out.println(teste1 + " : " + encrypt);
+
+			String decrypt = RsaKeyService.decrypt(encrypt, RsaKeyService.myPrivatekey);
+			System.out.println(decrypt);
+		} catch (GeneralSecurityException e) {
+			e.printStackTrace();
+		}
 	}
 
 }

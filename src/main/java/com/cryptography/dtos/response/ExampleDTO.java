@@ -1,8 +1,8 @@
-package com.cryptography.dtos;
+package com.cryptography.dtos.response;
 
 public class ExampleDTO {
 
-	private boolean success = true;
+	private boolean success;
 	private String message;
 
 	public boolean isSuccess() {
