@@ -1,6 +1,6 @@
 package com.cryptography.dtos.response;
 
-public class ExampleDTO {
+public class RSAResponse {
 
 	private boolean success;
 	private String message;

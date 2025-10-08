@@ -1,134 +1,59 @@
 # cryptography-with-java
 
 ### Objective
+Casos de uso com RSA e mTLS com ECDSA
+#### Algoritmo RSA
 
-[PT-BR]
+O algoritmo de criptografia Rivest-Shamir-Adleman (RSA) foi o primeiro algoritmo de criptografia assimétrica amplamente adotado.
+A criptografia assimétrica funciona por meio da criação de um par de chaves, uma pública e outra privada. 
 
-Depois de muitas horas de pesquisa.
-Coloquei neste repositório um curadoria de várias fontes de informação para que eu pudesse ter o código de rápido acesso para atender as necessidade para leitura de chave pública e privada para criptografia RSA e realizar a criptografia e descriptografia.
+Qualquer pessoa pode usar uma chave pública para criptografar dados. No entanto, apenas os detentores da chave privada correspondente podem descriptografar esses dados.
+Porém, com o RSA, tanto a chave privada quanto a pública podem criptografar os dados, enquanto a outra chave os descriptografa.
+Mas o verdadeiro propósito desse tipo de criptografia é provar a identidade do remetente. Se os dados fossem roubados e modificados em trânsito, a chave pública não seria capaz de descriptografar a nova mensagem, e assim o destinatário saberia que os dados foram modificados em trânsito.
 
+##### Como funciona?
+
+A criptografia assimétrica mantém a segurança dos dados usando algoritmos criptográficos para gerar um par de chaves: uma pública e uma privada. Qualquer pessoa pode usar uma chave pública para criptografar dados, mas apenas as pessoas com a chave privada correta podem descriptografá-los e lê-los.
+
+- A chave pública criptografa dados ou verifica assinaturas digitais e pode ser distribuída e compartilhada livremente.
+- A chave privada descriptografa dados e cria assinaturas digitais, mas deve ser secreta para garantir a segurança.
+
+Com o RSA, tanto a chave privada quanto a pública podem criptografar os dados, enquanto a outra chave os descriptografa.
+Mas o verdadeiro propósito desse tipo de criptografia é provar a identidade do remetente. Se os dados fossem roubados e modificados em trânsito, a chave pública não seria capaz de descriptografar a nova mensagem, e assim o destinatário saberia que os dados foram modificados em trânsito.
+
+##### Por que usar?
+A segurança da criptografia da chave pública depende de manter a chave privada confidencial e, ao mesmo tempo, compartilhar livremente a chave pública. A chave pública só pode criptografar dados, dessa forma não é muito interessante para os agentes de ameaças. Como os usuários nunca precisam compartilhar suas chaves privadas, isso reduz o risco de hackers interceptarem essas chaves que são muito mais valiosas.
+
+##### Implementando criptografia com Algoritmo RSA
 Utilizado AOP - Aspect Oriented Programming, ou Programação Orientada a Aspectos usando o spring-aspects, nos permite interceptar o request e response e realizar o tratamento necessário de forma abstrata e desacoplado do sistema.
 
 Esta aplicação pode trabalhar tanto quanto criptografando dados enviando à outra aplicação (aplicação cliente), quanto ser a aplicação cliente que trata o dado e responde criptografado.
 
-Se este repositório foi útil para você, não deixe de estrelar este conhecimento.
 
-Ainda em construção.
+- Suporte Nativo Java:
+Você precisa converter sua chave privada para o formato PKCS8 para que o Java possa ler:
+	- PKCS#8 PEM format: O Java Development Kit (JDK) oferece suporte nativo ao carregamento de chaves privadas codificadas no formato PKCS#8 PEM (por exemplo, BEGIN PRIVATE KEY, BEGIN ENCRYPTED PRIVATE KEY);
+	- X.509 PEM para chaves públicas e certificados: o Java também pode carregar facilmente chaves públicas e certificados de arquivos PEM que seguem o padrão X.509 (por exemplo, BEGIN PUBLIC KEY, BEGIN CERTIFICATE).
 
 
 ---
-[EN]
-
-After many hours of research,
-I have compiled in this repository a curation of various sources of information so that I could have quick access to the code to meet the needs for reading public and private keys for RSA encryption and perform encryption and decryption.
-
-Using AOP - Aspect Oriented Programming with spring-aspects, allows us to intercept the request and response and perform the necessary processing in an abstract and decoupled manner from the system.
-
-This application can work both by encrypting data (sending to another application/client application), as well as being a client application that processes the data and responds encrypted.
-
-If this repository has been helpful to you, be sure to star this knowledge.
-
-Under construction.
 
 ### How to Run
 java -jar cryptography-with-java-0.0.1-SNAPSHOT.jar
 
 nohup java -jar cryptography-with-java-0.0.1-SNAPSHOT.jar &
 
-### CALLING API
-curl --location --request POST 'localhost:8050/rest/criptografy'
+#### CALLING API
+curl --location --request POST 'localhost:8050/criptografy/rsa/encrypt'
 
 ---
 
+### Support
+Depois de muitas horas de pesquisa.
+Coloquei neste repositório um curadoria de várias fontes de informação para que eu pudesse ter o código de rápido acesso para atender as necessidade para leitura de chave pública e privada para criptografia RSA e realizar a criptografia e descriptografia.
 
+Também adicionamos o caso de uso mTLS - Como implementar no Java a comunicação por mTLS.
 
-# Creating Keys
-Generating with OpenSSL
+Se este repositório foi útil para você, não deixe de estrelar este conhecimento.
 
-Ver good online tool: https://acte.ltd/utils/openssl
-
-- Syntax: pkcs8
-- Algorithm: RSA
-- Size: 2048
-- No Passphrase
-
-### Private key
-
-openssl genrsa -out private-dev.pem -aes256 2048
-
-Senha: testdev123
-
-
-### Public Key
-
-openssl rsa -in private-dev.pem -pubout -out public-dev.pem
-
-
-
-#### Testing
-
-- Criptografando com a chave pública
-
-openssl pkeyutl -in test.txt -encrypt -pubin -inkey public-dev.pem > encrypted-test.txt
-
-- Descriptografando com a chave pública
-
-openssl rsautl -decrypt -inkey private-dev.pem -in encrypted-test.txt > decrypted-test.txt
-
-
-# Creating Keys - NO PASSPHRASE
-Generating with OpenSSL
-
-
-###  Private key
-
-openssl genrsa -out private-nopwd-dev.pem 2048
-
-
-   - Convert private Key to PKCS#8 format (so Java can read it)
-   
-openssl pkcs8 -topk8 -inform PEM -outform DER -in private-nopwd-dev.pem -out private-nopwd-dev.der -nocrypt
-
-
-###  Public key
-
-openssl rsa -in private-nopwd-dev.pem -pubout -out public-nopwd-dev.pem
-
-
-   - Output public key portion in DER format (so Java can read it)
-openssl rsa -in private-nopwd-dev.pem -pubout -outform DER -out public-nopwd-dev.der
-
-
-
-#### Testing
-
-- Criptografando com a chave pública
-
-openssl pkeyutl -in test.txt -encrypt -pubin -inkey public-nopwd-dev.pem > encrypted-nopwd-test.txt
-
-- Descriptografando com a chave pública
-
-openssl rsautl -decrypt -inkey private-nopwd-dev.pem -in encrypted-nopwd-test.txt > decrypted-nopwd-test.txt
-
-
-# Checking
-
-- Check a private key
-
-openssl rsa -in private-nopwd-dev.pem -check
-
-
-- Check a public key
-
-openssl rsa -inform PEM -pubin -in public-nopwd-dev.pem -text -noout
-
-openssl pkey -inform PEM -pubin -in public-nopwd-dev.pem -text -noout
-
-
-# Converting PEM to KEY file
-(so Java can read it)
-
-
-openssl rsa -outform der -in private-nopwd-dev.pem -out private-nopwd-dev.key
-
-ssh-keygen -f private-nopwd-dev.pem > public-nopwd-dev.pub
+Em construção.

@@ -2,7 +2,7 @@ package com.cryptography.dtos.request;
 
 import com.cryptography.annotations.SensitiveData;
 
-public class ExampleDTORequest {
+public class RSARequest {
 
 	@SensitiveData
 	private String field;

@@ -16,8 +16,8 @@ import java.security.spec.X509EncodedKeySpec;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import com.cryptography.dtos.request.ExampleDTORequest;
-import com.cryptography.dtos.response.ExampleDTO;
+import com.cryptography.dtos.request.RSARequest;
+import com.cryptography.dtos.response.RSAResponse;
 
 @Service
 public class CryptographyService {
@@ -91,16 +91,16 @@ public class CryptographyService {
 	}
 
 	/*
-	 * TODO something with request body?
+	 * TODO What we do with request body?
 	 */
-	public ExampleDTO getResponse(ExampleDTORequest request) {
+	public RSAResponse encrypt(RSARequest request) {
 
-		ExampleDTO res = new ExampleDTO();
+		RSAResponse res = new RSAResponse();
 		testKeys();
 
 		try {
 			String criptografiedStr = RsaKeyService.encrypt("12756247820", RsaKeyService.partnerPublickey);
-			System.out.println("Apenas testando método de criptografia " + criptografiedStr);
+			System.out.println("Criptografando a mensagem com o certificado público: " + criptografiedStr);
 			res.setMessage(criptografiedStr);
 			res.setSuccess(true);
 			return res;
