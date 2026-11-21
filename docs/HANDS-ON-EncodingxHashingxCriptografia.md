@@ -157,6 +157,61 @@ openssl pkeyutl -decrypt -pubin -inkey publica.pem -pkeyopt rsa_padding_mode:oae
 
 ---
 
+## 4b. Assimétrica no mundo real: mTLS + chave no Secrets Manager
+
+Pré-requisito: o setup em [AWS-MTLS-SECRETS-MANAGER.md](AWS-MTLS-SECRETS-MANAGER.md) (API Gateway, Secrets Manager e arquivos em `C:\hands-on\mtls`).
+
+```cmd
+cd /d C:\hands-on\mtls
+set "HOST=mtls-demo.<seu-dominio>"
+```
+
+### Camada 1: mTLS ("quem é você?")
+
+Sem certificado de cliente, o API Gateway recusa a conexão:
+
+```cmd
+(echo GET /hello HTTP/1.1& echo Host: %HOST%& echo Connection: close& echo.) | openssl s_client -quiet -connect %HOST%:443 -servername %HOST%
+```
+
+Com o certificado assinado pela CA que está no truststore:
+
+```cmd
+(echo GET /hello HTTP/1.1& echo Host: %HOST%& echo Connection: close& echo.) | openssl s_client -quiet -connect %HOST%:443 -servername %HOST% -cert client.pem -key client.key
+```
+
+Resultado: `HTTP/1.1 200 OK` e `{"status":"ok","mensagem":"mTLS validado"}`.
+
+> Usamos `openssl s_client` porque o `curl` do Windows (nativo e do Git) usa Schannel, que não aceita certificado de cliente em PEM.
+
+**O que mostrar:** sem o certificado certo, a conexão nem chega na API. A assimetria está no certificado: o cliente prova que tem a chave privada (`client.key`) sem nunca enviá-la.
+
+### Camada 2: o dado protegido, com a chave no cofre
+
+Suba a app (porta 8050) com o perfil AWS configurado e cifre o dado com a chave **pública** da app:
+
+```cmd
+openssl pkeyutl -encrypt -pubin -inkey app-publica.pem -pkeyopt rsa_padding_mode:oaep -pkeyopt rsa_oaep_md:sha256 -pkeyopt rsa_mgf1_md:sha256 -in ..\mensagem.txt -out msg.rsa
+openssl base64 -A -in msg.rsa -out msg.b64
+type msg.b64
+
+for /f %i in (msg.b64) do echo {"field":"%i"}> body.json
+
+curl -s -H "Content-Type: application/json" --data @body.json http://localhost:8050/secretsdemo/decrypt
+```
+
+Resultado: `{"plaintext":"Pedido 1234 - valor R$ 500,00\r\n"}`. O `\r\n` é a quebra de linha que o `echo` gravou no `mensagem.txt`.
+
+**O que mostrar:**
+- Abra `src/main/resources/secretsdemo.properties`: **não tem chave privada**, só o nome do secret (`hands-on/rsa-private-key`).
+- Abra o secret no console da AWS: a chave está lá, protegida por IAM, e cada leitura fica auditada no CloudTrail.
+- Rode a app **sem** credencial AWS: o endpoint volta `502 Falha ao obter a chave no Secrets Manager`. Sem permissão, não há chave.
+- Contraste: o `application.properties` antigo tinha a chave privada em texto claro, e no Git. **Antes: chave no Git → Depois: chave no cofre.**
+
+> Em script `.cmd`, troque `%i` por `%%i` no `for /f`.
+
+---
+
 ## Limpeza
 
 ```cmd
