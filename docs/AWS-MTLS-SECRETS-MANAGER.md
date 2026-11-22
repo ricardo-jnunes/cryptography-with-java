@@ -28,7 +28,7 @@ cd /d C:\hands-on\mtls
 **CA de demonstração** (quem "assina" os clientes confiáveis):
 
 ```cmd
-openssl req -x509 -newkey rsa:2048 -nodes -keyout ca.key -out ca.pem -days 30 -subj "/CN=AIR Demo CA"
+openssl req -x509 -newkey rsa:2048 -nodes -keyout ca.key -out ca.pem -days 30 -subj "/CN=Crypt Demo CA"
 copy ca.pem truststore.pem
 ```
 

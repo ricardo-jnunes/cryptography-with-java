@@ -13,6 +13,10 @@ Roteiro para rodar ao vivo no **cmd do Windows**. São 4 demos: Encoding, Hashin
 
 ## 0. Preparação (antes da apresentação)
 
+O certutil.exe é uma ferramenta de linha de comando nativa do Windows, instalada com os Serviços de Certificados, usada para gerenciar, exibir e configurar Autoridades de Certificação (AC),  permite verificar certificados e calcular hashes de arquivos. Porém não criptografa nem descriptografa arquivos diretamente.
+
+E para tal usaremos o openssl.exe é uma ferramenta de linha de comando do OpenSSL, usada para criptografia, geração de chaves, certificados e muito mais.
+
 `certutil` já vem no Windows. O `openssl` não vem, mas é instalado junto com o **Git for Windows**. Basta colocá-lo no PATH da sessão:
 
 ```cmd
@@ -22,11 +26,9 @@ openssl version
 mkdir C:\hands-on
 cd /d C:\hands-on
 
-echo Pedido 1234 - valor R$ 500,00> mensagem.txt
-type mensagem.txt
+echo Pedido 1234 > mensagem.txt
+cat mensagem.txt
 ```
-
-> Dica: não deixe espaço antes do `>` no `echo`, senão o arquivo ganha um espaço no final e o hash muda.
 
 ---
 
@@ -55,11 +57,11 @@ Muita gente acha que Base64 "esconde" credenciais. Mostre dois casos reais:
 **Caso 1: header HTTP Basic Auth** capturado em um log ou proxy:
 
 ```text
-Authorization: Basic YWRtaW46U2VuaGFAMTIz
+Authorization: Basic UGVkaWRvIDEyMzQK
 ```
 
 ```cmd
-echo YWRtaW46U2VuaGFAMTIz| openssl base64 -d
+echo UGVkaWRvIDEyMzQK| openssl base64 -d
 ```
 
 Resultado: `admin:Senha@123` (usuário e senha em texto claro).
@@ -105,7 +107,14 @@ certutil -hashfile mensagem.txt SHA256
 - Rodar de novo no mesmo arquivo dá **sempre o mesmo hash** (determinístico).
 - Não existe comando para "des-hashear": é de mão única.
 
+### Casos de uso
+Muito usado para guardar a senha do usuário no banco de dados. O hash é armazenado, e na hora do login o sistema calcula o hash da senha digitada e compara com o que está no banco. Se bater, a senha está correta. 
+
 > Mensagem para gestão: para **senhas** use hash com *salt* e algoritmo lento (bcrypt, Argon2, PBKDF2), nunca SHA-256 puro nem MD5.
+O 'SALT'  é um conjunto de dados aleatórios adicionados a uma informação (como uma senha ou um arquivo) antes de ela passar por uma função de hash.
+O objetivo principal dele é garantir que dois dados iguais gerem resultados completamente diferentes
+
+Curiosidade: Função 'hash' é usada para garantir a integridade da prova digital, na chamada Cadeia de Custódia como na entrega do laudo ou em auditorias/perícias ) para comprovar que o material digital examinado não foi alterado, como em casos de apreensão de celulares, computadores, pen drives, etc.
 
 ---
 
@@ -123,6 +132,16 @@ type decifrada-aes.txt
 openssl enc -d -aes-256-cbc -pbkdf2 -in mensagem.aes -out falha.txt -pass pass:SenhaErrada
 ```
 
+```
+• openssl enc: Invoca a ferramenta de criptografia simétrica (encryption) do OpenSSL.
+• -aes-256-cbc: Define o algoritmo de criptografia. Usa o AES com chave de 256 bits no modo de operação CBC (Cipher Block Chaining).
+• -pbkdf2: Instrui o OpenSSL a usar o algoritmo PBKDF2 para transformar a sua senha em uma chave criptográfica segura (e um vetor de inicialização, o IV). Isso substitui o método antigo e inseguro (EVP_BytesToKey) que era padrão nas versões antigas do OpenSSL.
+• -salt: Gera um salt (valor aleatório) antes de derivar a chave e o grava no cabeçalho do arquivo de saída. Isso garante que criptografar o mesmo texto duas vezes com a mesma senha gere arquivos completamente diferentes. (Nota: No OpenSSL moderno, o uso de salt já é padrão, mas mantê-lo explícito é uma boa prática).
+• -in mensagem.txt: Especifica o arquivo de entrada (o texto original que você quer proteger).
+• -out mensagem.aes: Especifica o nome do arquivo de saída que conterá os dados criptografados.
+• -pass: Indica a fonte de onde o OpenSSL deve ler a senha. Atenção: No seu exemplo, o comando está incompleto no final, pois -pass exige um argumento logo em seguida.
+
+```
 **O que mostrar:**
 - `type mensagem.aes` mostra lixo binário (começa com `Salted__`): o conteúdo está protegido.
 - Com a senha certa, o texto volta. Com a senha errada aparece `bad decrypt`.
