@@ -1,6 +1,6 @@
 region              = "us-east-1"
-hosted_zone_name    = "exemplo.com"
-domain_name         = "mtls-demo.exemplo.com"
+hosted_zone_name    = "demoworkshop.com"
+domain_name         = "mtls-demo.demoworkshop.com"
 truststore_pem_path = "C:/hands-on/mtls/truststore.pem"
 
 # Opcional: usuário IAM que lerá o secret
