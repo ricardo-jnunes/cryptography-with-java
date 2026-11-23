@@ -1,17 +1,18 @@
-# Setup AWS: mTLS no API Gateway + chave privada no Secrets Manager
+# Setup AWS: mTLS no API Gateway + API key no Secrets Manager
 
-Preparação **antes** da apresentação para a seção 4 do [hands-on](HANDS-ON-EncodingxHashingxCriptografia.md). Faça isso numa conta AWS de **dev/sandbox**, nunca em produção.
+Preparação **antes** da apresentação para a seção 4b do [hands-on](HANDS-ON-EncodingxHashingxCriptografia.md). Faça isso numa conta AWS de **dev/sandbox**, nunca em produção.
 
 ```
-              (1) mTLS: quem é você?                       (2) Payload: o dado em si
-cmd ──[client.pem]──► API Gateway (custom domain)          cmd ──[campo cifrado c/ chave PÚBLICA]──► app local :8050
-                         │ valida cert contra truststore (S3)                                          │
-                         └─► Mock 200                                         Secrets Manager ◄──────┘ busca chave PRIVADA
+       (1) mTLS: quem é você?                          (2) Gestão de secrets
+cmd ──[client.pem]──► API Gateway (custom domain)      cmd ──► app local :8050 ──► Secrets Manager
+                         │ valida cert contra                    GET /secretsdemo/api-key   (hands-on/api-key)
+                         │ truststore (S3)                       ◄── API key mascarada
+                         └─► Mock 200
 ```
 
 - **mTLS** autentica o **cliente** e cifra o **canal**. O TLS termina no API Gateway.
-- **Payload** protege o **dado**: só quem tem a chave privada (guardada no Secrets Manager) lê.
-- São **pares de chaves diferentes**.
+- **Secrets Manager** guarda uma **API key**: a app conhece só o nome do secret, nunca o valor no código.
+- São demos **independentes**: nenhuma chave do mTLS vai para o Secrets Manager.
 
 ---
 
@@ -46,20 +47,11 @@ openssl req -newkey rsa:2048 -nodes -keyout client.key -out client.csr -subj "/C
 openssl x509 -req -in client.csr -CA ca.pem -CAkey ca.key -CAcreateserial -out client.pem -days 30
 ```
 
-**Par RSA do payload.** É um par **novo**: não reutilize as chaves que estão no `application.properties`, porque elas estão no histórico do Git.
-
-```cmd
-openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out app-privada.pem
-openssl pkey -in app-privada.pem -pubout -out app-publica.pem
-```
-
 | Arquivo | Vai para | Secreto? |
 |---|---|---|
 | `truststore.pem` (= `ca.pem`) | Bucket S3 do API Gateway | Não |
 | `ca.key` | Fica guardado offline | **Sim** |
 | `client.pem` + `client.key` | Máquina do cliente (o cmd da demo) | `client.key` **sim** |
-| `app-publica.pem` | Quem vai enviar dados (o cmd da demo) | Não |
-| `app-privada.pem` | **Secrets Manager**. Depois apague o arquivo local | **Sim** |
 
 ---
 
@@ -101,11 +93,11 @@ Sem isso, a URL `https://<id>.execute-api...` continua aberta **sem mTLS** e qua
 ### 6. Route 53
 Hosted zone → Create record → `mtls-demo` → tipo **A** → **Alias** → *API Gateway API* → região → o domínio do passo 4.
 
-### 7. Secrets Manager: chave privada
+### 7. Secrets Manager: API key
 1. Store a new secret → **Other type of secret** → aba **Plaintext**.
-2. Cole o conteúdo inteiro de `app-privada.pem`, incluindo as linhas `-----BEGIN PRIVATE KEY-----` e `-----END PRIVATE KEY-----`.
-3. Nome: `hands-on/rsa-private-key`.
-4. Depois de criado, **apague** o `app-privada.pem` local: `del app-privada.pem`.
+2. Cole **só o valor** da API key, sem JSON e sem aspas. Use um valor fictício, por exemplo `sk-demo-123456`.
+3. Nome: `hands-on/api-key`.
+4. Para a demo de rotação: depois, em *Retrieve secret value* → *Edit*, troque o valor e chame o endpoint de novo. O `versionId` muda.
 
 ### 8. IAM: permissão mínima para a app local
 Anexe ao usuário ou role do seu perfil local:
@@ -116,7 +108,7 @@ Anexe ao usuário ou role do seu perfil local:
   "Statement": [{
     "Effect": "Allow",
     "Action": "secretsmanager:GetSecretValue",
-    "Resource": "arn:aws:secretsmanager:<regiao>:<conta>:secret:hands-on/rsa-private-key-*"
+    "Resource": "arn:aws:secretsmanager:<regiao>:<conta>:secret:hands-on/api-key-*"
   }]
 }
 ```
@@ -129,14 +121,15 @@ Configure as credenciais locais com `aws configure` ou `aws sso login --profile 
 - [ ] `openssl s_client` **sem** certificado → recusado
 - [ ] `openssl s_client` **com** certificado → `HTTP/1.1 200` + `{"status":"ok",...}`
 - [ ] URL `execute-api` padrão → não responde (endpoint desabilitado)
-- [ ] App local: `POST /secretsdemo/decrypt` devolve o texto claro
-- [ ] App sem credencial AWS → `502` com mensagem clara (bom para mostrar que sem IAM não há chave)
+- [ ] App local: `GET /secretsdemo/api-key` devolve a API key mascarada
+- [ ] Trocar o valor no console → `versionId` muda na próxima chamada
+- [ ] App sem credencial AWS → `502` com mensagem clara (bom para mostrar que sem IAM não há segredo)
 
 ## Limpeza pós-apresentação
 1. Route 53: apague o registro `mtls-demo`.
 2. API Gateway: apague o custom domain e a API.
 3. ACM: apague o certificado.
 4. S3: esvazie (todas as versões) e apague o bucket.
-5. Secrets Manager: apague o secret (janela de recuperação de 7 dias, ou pela CLI: `aws secretsmanager delete-secret --secret-id hands-on/rsa-private-key --force-delete-without-recovery`).
+5. Secrets Manager: apague o secret (janela de recuperação de 7 dias, ou pela CLI: `aws secretsmanager delete-secret --secret-id hands-on/api-key --force-delete-without-recovery`).
 6. IAM: remova a política.
 7. Local: `rmdir /s /q C:\hands-on\mtls`.

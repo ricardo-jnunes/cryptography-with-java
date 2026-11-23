@@ -176,9 +176,11 @@ openssl pkeyutl -decrypt -pubin -inkey publica.pem -pkeyopt rsa_padding_mode:oae
 
 ---
 
-## 4b. Assimétrica no mundo real: mTLS + chave no Secrets Manager
+## 4b. No mundo real: mTLS + API key no Secrets Manager
 
 Pré-requisito: o setup em [AWS-MTLS-SECRETS-MANAGER.md](AWS-MTLS-SECRETS-MANAGER.md) (API Gateway, Secrets Manager e arquivos em `C:\hands-on\mtls`).
+
+São duas demos **independentes**: o mTLS mostra a criptografia assimétrica em uso, e o Secrets Manager mostra a gestão de secrets.
 
 ```cmd
 cd /d C:\hands-on\mtls
@@ -205,29 +207,26 @@ Resultado: `HTTP/1.1 200 OK` e `{"status":"ok","mensagem":"mTLS validado"}`.
 
 **O que mostrar:** sem o certificado certo, a conexão nem chega na API. A assimetria está no certificado: o cliente prova que tem a chave privada (`client.key`) sem nunca enviá-la.
 
-### Camada 2: o dado protegido, com a chave no cofre
+### Gestão de secrets: API key no cofre
 
-Suba a app (porta 8050) com o perfil AWS configurado e cifre o dado com a chave **pública** da app:
+Suba a app (porta 8050) com o perfil AWS configurado e peça a API key:
 
 ```cmd
-openssl pkeyutl -encrypt -pubin -inkey app-publica.pem -pkeyopt rsa_padding_mode:oaep -pkeyopt rsa_oaep_md:sha256 -pkeyopt rsa_mgf1_md:sha256 -in ..\mensagem.txt -out msg.rsa
-openssl base64 -A -in msg.rsa -out msg.b64
-type msg.b64
-
-for /f %i in (msg.b64) do echo {"field":"%i"}> body.json
-
-curl -s -H "Content-Type: application/json" --data @body.json http://localhost:8050/secretsdemo/decrypt
+curl -s http://localhost:8050/secretsdemo/api-key
 ```
 
-Resultado: `{"plaintext":"Pedido 1234 - valor R$ 500,00\r\n"}`. O `\r\n` é a quebra de linha que o `echo` gravou no `mensagem.txt`.
+Resultado:
+
+```json
+{"secretName":"hands-on/api-key","versionId":"a1b2...","apiKeyMasked":"sk-d**********","length":14}
+```
 
 **O que mostrar:**
-- Abra `src/main/resources/secretsdemo.properties`: **não tem chave privada**, só o nome do secret (`hands-on/rsa-private-key`).
-- Abra o secret no console da AWS: a chave está lá, protegida por IAM, e cada leitura fica auditada no CloudTrail.
-- Rode a app **sem** credencial AWS: o endpoint volta `502 Falha ao obter a chave no Secrets Manager`. Sem permissão, não há chave.
-- Contraste: o `application.properties` antigo tinha a chave privada em texto claro, e no Git. **Antes: chave no Git → Depois: chave no cofre.**
-
-> Em script `.cmd`, troque `%i` por `%%i` no `for /f`.
+- Abra `src/main/resources/secretsdemo.properties`: **não tem API key**, só o nome do secret (`hands-on/api-key`).
+- A resposta vem **mascarada**: a app tem o valor real em memória para uso interno, mas segredo nunca vai para resposta nem para log.
+- Troque o valor do secret no console da AWS e chame de novo: o `versionId` muda **sem redeploy e sem mexer no código**. Isso é rotação.
+- Rode a app **sem** credencial AWS: o endpoint volta `502 Falha ao obter a API key no Secrets Manager`. Sem permissão no IAM, não há segredo.
+- Contraste: o `application.properties` antigo tem chaves em texto claro, e no Git. **Antes: segredo no Git → Depois: segredo no cofre.**
 
 ---
 
