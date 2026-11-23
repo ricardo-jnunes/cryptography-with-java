@@ -4,16 +4,16 @@ output "mtls_url" {
 }
 
 output "secret_name" {
-  value = aws_secretsmanager_secret.rsa_private_key.name
+  value = aws_secretsmanager_secret.api_key.name
 }
 
 output "read_secret_policy_arn" {
-  value = aws_iam_policy.read_secret.arn
+  value = var.create_read_policy ? aws_iam_policy.read_secret[0].arn : null
 }
 
 output "put_secret_command" {
-  description = "Grava a chave privada no secret (rode fora do repositório)."
-  value       = "aws secretsmanager put-secret-value --region ${var.region} --secret-id ${var.secret_name} --secret-string file://app-privada.pem"
+  description = "Grava a API key (valor fictício) no secret. Troque o valor e rode de novo para a demo de rotação."
+  value       = "aws secretsmanager put-secret-value --region ${var.region} --secret-id ${var.secret_name} --secret-string sk-demo-123456"
 }
 
 output "test_command" {

@@ -197,11 +197,11 @@ resource "aws_route53_record" "api" {
 
 # ---------------------------------------------------------------------------
 # Secrets Manager: só o "cofre". O valor é gravado fora do Terraform (CLI)
-# para a chave privada não ir parar no state.
+# para a API key não ir parar no state.
 # ---------------------------------------------------------------------------
-resource "aws_secretsmanager_secret" "rsa_private_key" {
+resource "aws_secretsmanager_secret" "api_key" {
   name                    = var.secret_name
-  description             = "Chave privada RSA do payload (demo)"
+  description             = "API key de terceiro lida pela app secretsdemo (demo)"
   recovery_window_in_days = 0 # demo: apaga imediatamente no destroy
 }
 
@@ -209,20 +209,23 @@ resource "aws_secretsmanager_secret" "rsa_private_key" {
 # IAM: permissão mínima para a app local
 # ---------------------------------------------------------------------------
 data "aws_iam_policy_document" "read_secret" {
+  count = var.create_read_policy ? 1 : 0
+
   statement {
     effect    = "Allow"
     actions   = ["secretsmanager:GetSecretValue"]
-    resources = [aws_secretsmanager_secret.rsa_private_key.arn]
+    resources = [aws_secretsmanager_secret.api_key.arn]
   }
 }
 
 resource "aws_iam_policy" "read_secret" {
-  name   = "mtls-demo-read-rsa-private-key"
-  policy = data.aws_iam_policy_document.read_secret.json
+  count  = var.create_read_policy ? 1 : 0
+  name   = "mtls-demo-read-api-key"
+  policy = data.aws_iam_policy_document.read_secret[0].json
 }
 
 resource "aws_iam_user_policy_attachment" "read_secret" {
-  count      = var.attach_policy_to_user == "" ? 0 : 1
+  count      = var.create_read_policy && var.attach_policy_to_user != "" ? 1 : 0
   user       = var.attach_policy_to_user
-  policy_arn = aws_iam_policy.read_secret.arn
+  policy_arn = aws_iam_policy.read_secret[0].arn
 }

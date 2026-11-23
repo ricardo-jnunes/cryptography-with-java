@@ -26,9 +26,15 @@ variable "stage_name" {
 }
 
 variable "secret_name" {
-  description = "Nome do secret da chave privada RSA. Deve bater com aws.secrets.rsa-private-key-id."
+  description = "Nome do secret da API key. Deve bater com aws.secrets.api-key-id em secretsdemo.properties."
   type        = string
-  default     = "hands-on/rsa-private-key"
+  default     = "hands-on/api-key"
+}
+
+variable "create_read_policy" {
+  description = "Cria a política IAM de leitura do secret. Use false se o seu usuário não tiver iam:CreatePolicy."
+  type        = bool
+  default     = true
 }
 
 variable "attach_policy_to_user" {
