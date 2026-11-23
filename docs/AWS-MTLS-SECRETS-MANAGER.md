@@ -28,9 +28,16 @@ cd /d C:\hands-on\mtls
 **CA de demonstração** (quem "assina" os clientes confiáveis):
 
 ```cmd
-openssl req -x509 -newkey rsa:2048 -nodes -keyout ca.key -out ca.pem -days 30 -subj "/CN=Crypt Demo CA"
+openssl req -x509 -newkey rsa:2048 -nodes -keyout ca.key -out ca.pem -days 30 -subj "/CN=Demo Workshop CA"
 copy ca.pem truststore.pem
 ```
+
+> **Erro `name is expected to be in the format /type0=value0/...` com `C:/Program Files/Git/CN=...`?**
+> Você rodou no **Git Bash**, que converte argumentos iniciados em `/` em caminhos do Windows. Os comandos acima são para o **cmd**. No Git Bash, use um destes:
+> - `MSYS_NO_PATHCONV=1 openssl req ... -subj "/CN=Demo Workshop CA"`
+> - ou barra dupla: `-subj "//CN=Demo Workshop CA"`
+>
+> Vale também para o `-subj` do certificado do cliente. No Git Bash, troque `copy` por `cp` e `set PATH` não é necessário.
 
 **Certificado do cliente**, assinado pela CA:
 
