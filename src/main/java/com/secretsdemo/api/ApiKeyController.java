@@ -1,6 +1,7 @@
 package com.secretsdemo.api;
 
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 import org.springframework.http.HttpStatus;
@@ -36,19 +37,19 @@ public class ApiKeyController {
 	@GetMapping("/api-key")
 	public ResponseEntity<ApiKeyResponse> apiKey() {
 		ApiKeySecret secret = apiKeyProvider.fetch();
-		String apiKey = secret.getApiKey() == null ? "" : secret.getApiKey().trim();
-		return ResponseEntity.ok(new ApiKeyResponse(
-				secret.getName(), secret.getVersionId(), mask(apiKey), apiKey.length()));
+		Map<String, String> masked = new LinkedHashMap<>();
+		secret.getValues().forEach((key, value) -> masked.put(key, mask(value == null ? "" : value.trim())));
+		return ResponseEntity.ok(new ApiKeyResponse(secret.getName(), secret.getVersionId(), masked));
 	}
 
-	/** "sk-demo-123456" -> "sk-d**********". Valores curtos são mascarados por inteiro. */
+	/** "sk-demo-123456" -> "**********3456". Valores curtos são mascarados por inteiro. */
 	static String mask(String value) {
 		int visible = value.length() > 2 * VISIBLE_CHARS ? VISIBLE_CHARS : 0;
-		StringBuilder masked = new StringBuilder(value.substring(0, visible));
-		for (int i = visible; i < value.length(); i++) {
+		StringBuilder masked = new StringBuilder();
+		for (int i = 0; i < value.length() - visible; i++) {
 			masked.append('*');
 		}
-		return masked.toString();
+		return masked.append(value.substring(value.length() - visible)).toString();
 	}
 
 	/** Sem credencial, sem permissão no IAM ou secret inexistente. */

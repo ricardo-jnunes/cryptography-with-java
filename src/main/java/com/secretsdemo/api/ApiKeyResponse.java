@@ -1,18 +1,18 @@
 package com.secretsdemo.api;
 
-/** Prova de que a API key foi obtida do cofre, sem expor o valor. */
+import java.util.Map;
+
+/** Prova de que o secret foi obtido do cofre, sem expor os valores. */
 public class ApiKeyResponse {
 
 	private final String secretName;
 	private final String versionId;
-	private final String apiKeyMasked;
-	private final int length;
+	private final Map<String, String> values;
 
-	public ApiKeyResponse(String secretName, String versionId, String apiKeyMasked, int length) {
+	public ApiKeyResponse(String secretName, String versionId, Map<String, String> values) {
 		this.secretName = secretName;
 		this.versionId = versionId;
-		this.apiKeyMasked = apiKeyMasked;
-		this.length = length;
+		this.values = values;
 	}
 
 	public String getSecretName() {
@@ -23,11 +23,8 @@ public class ApiKeyResponse {
 		return versionId;
 	}
 
-	public String getApiKeyMasked() {
-		return apiKeyMasked;
-	}
-
-	public int getLength() {
-		return length;
+	/** Chave do secret -> valor mascarado (só os últimos caracteres visíveis). */
+	public Map<String, String> getValues() {
+		return values;
 	}
 }

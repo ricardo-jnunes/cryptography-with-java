@@ -48,7 +48,7 @@ Implementação objetiva e isolada no pacote `com.secretsdemo`, separada do cód
 | **API key** (`GET /secretsdemo/api-key`) | Gestão de secrets: a app busca o segredo no cofre em tempo de execução | **AWS Secrets Manager** (`hands-on/api-key`) |
 
 - O arquivo [secretsdemo.properties](src/main/resources/secretsdemo.properties) guarda **só o nome do secret**, nunca o valor.
-- A resposta devolve a API key **mascarada** (ex.: `sk-d**********`), com o `versionId`. O valor real nunca vai para resposta nem para log.
+- A resposta devolve cada par chave/valor do secret com o valor **mascarado**, só os últimos 4 caracteres visíveis (ex.: `**********3456`), com o `versionId`. O valor real nunca vai para resposta nem para log.
 - O secret é lido a cada chamada: trocar o valor no console reflete na hora, sem redeploy. Em produção, use cache com expiração.
 - O pacote é carregado pela `CryptographyApplication` via auto-configuration ([AutoConfiguration.imports](src/main/resources/META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports)), sem alterar `com.cryptography`.
 
@@ -85,7 +85,7 @@ Secrets Demo (`com.secretsdemo`):
 curl http://localhost:8050/secretsdemo/api-key
 ```
 
-Respostas: `200 {"secretName":"hands-on/api-key","versionId":"...","apiKeyMasked":"sk-d**********","length":14}`. `502` se não for possível obter a API key no Secrets Manager (sem credencial, sem permissão ou secret inexistente).
+Respostas: `200 {"secretName":"hands-on/api-key","versionId":"...","values":{"apiKey":"**********3456"}}`. `502` se não for possível obter a API key no Secrets Manager (sem credencial, sem permissão ou secret inexistente).
 
 ---
 
